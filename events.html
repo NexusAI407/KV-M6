@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Events - Class Connect | Kegalu Vidyalaya M6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo">KV</div>
+                <div>
+                    <div class="school-name">Kegalu Vidyalaya</div>
+                    <div class="class-name">Class M6</div>
+                </div>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="profile.html">Profile</a></li>
+                    <li><a href="friends.html">Friends</a></li>
+                    <li><a href="events.html" class="active">Events</a></li>
+                    <li><a href="gallery.html">Gallery</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                    <li><a href="#" id="logoutBtn" style="color: var(--accent-yellow);">Logout</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1 class="page-title">Upcoming Events</h1>
+
+        <div class="events-list" id="eventsList">
+            <p style="text-align: center; color: var(--gray);">Loading events...</p>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            currentUser = await checkAuth();
+            if (currentUser) {
+                await loadEvents();
+            }
+        });
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        }
+
+        async function loadEvents() {
+            const container = document.getElementById('eventsList');
+            
+            try {
+                const { data: events, error } = await supabaseClient
+                    .from('events')
+                    .select('*')
+                    .order('date', { ascending: true });
+
+                if (error) throw error;
+
+                if (events.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: var(--gray);">No events scheduled yet.</p>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                events.forEach(event => {
+                    const eventCard = document.createElement('div');
+                    eventCard.className = 'event-card';
+                    eventCard.innerHTML = `
+                        <div class="event-date">${formatDate(event.date)}</div>
+                        <h2 class="event-title">${event.title}</h2>
+                        <p class="event-description">${event.description}</p>
+                    `;
+                    container.appendChild(eventCard);
+                });
+            } catch (error) {
+                console.error('Error loading events:', error);
+                container.innerHTML = '<p style="text-align: center; color: #DC2626;">Error loading events. Please check your Supabase configuration.</p>';
+            }
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            await supabaseClient.auth.signOut();
+            window.location.href = 'login.html';
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Friends - Class Connect | Kegalu Vidyalaya M6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo">KV</div>
+                <div>
+                    <div class="school-name">Kegalu Vidyalaya</div>
+                    <div class="class-name">Class M6</div>
+                </div>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="profile.html">Profile</a></li>
+                    <li><a href="friends.html" class="active">Friends</a></li>
+                    <li><a href="events.html">Events</a></li>
+                    <li><a href="gallery.html">Gallery</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                    <li><a href="#" id="logoutBtn" style="color: var(--accent-yellow);">Logout</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1 class="page-title">My Classmates</h1>
+
+        <div class="friends-grid" id="friendsGrid">
+            <p style="text-align: center; color: var(--gray); grid-column: 1 / -1;">Loading classmates...</p>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            currentUser = await checkAuth();
+            if (currentUser) {
+                await loadFriends();
+            }
+        });
+
+        async function loadFriends() {
+            const grid = document.getElementById('friendsGrid');
+            
+            try {
+                const { data: users, error } = await supabaseClient
+                    .from('users')
+                    .select('*')
+                    .order('name', { ascending: true });
+
+                if (error) throw error;
+
+                if (users.length === 0) {
+                    grid.innerHTML = '<p style="text-align: center; color: var(--gray); grid-column: 1 / -1;">No classmates found.</p>';
+                    return;
+                }
+
+                grid.innerHTML = '';
+                users.forEach(user => {
+                    const initials = getInitials(user.name);
+                    const friendCard = document.createElement('div');
+                    friendCard.className = 'friend-card';
+                    friendCard.innerHTML = `
+                        <div class="friend-avatar">${initials}</div>
+                        <div class="friend-name">${user.name}</div>
+                        <div class="friend-class">${user.class}</div>
+                    `;
+                    grid.appendChild(friendCard);
+                });
+            } catch (error) {
+                console.error('Error loading friends:', error);
+                grid.innerHTML = '<p style="text-align: center; color: #DC2626; grid-column: 1 / -1;">Error loading classmates. Please check your Supabase configuration.</p>';
+            }
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            await supabaseClient.auth.signOut();
+            window.location.href = 'login.html';
+        });
+    </script>
+</body>
+</html>
+

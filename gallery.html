@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery - Class Connect | Kegalu Vidyalaya M6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo">KV</div>
+                <div>
+                    <div class="school-name">Kegalu Vidyalaya</div>
+                    <div class="class-name">Class M6</div>
+                </div>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="profile.html">Profile</a></li>
+                    <li><a href="friends.html">Friends</a></li>
+                    <li><a href="events.html">Events</a></li>
+                    <li><a href="gallery.html" class="active">Gallery</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                    <li><a href="#" id="logoutBtn" style="color: var(--accent-yellow);">Logout</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1 class="page-title">Class Gallery</h1>
+
+        <div class="gallery-grid" id="galleryGrid">
+            <p style="text-align: center; color: var(--gray); grid-column: 1 / -1;">Loading gallery...</p>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            currentUser = await checkAuth();
+            if (currentUser) {
+                await loadGallery();
+            }
+        });
+
+        async function loadGallery() {
+            const grid = document.getElementById('galleryGrid');
+            
+            try {
+                // List files from Supabase Storage bucket 'gallery'
+                const { data: files, error } = await supabaseClient
+                    .storage
+                    .from('gallery')
+                    .list('', {
+                        limit: 100,
+                        sortBy: { column: 'created_at', order: 'desc' }
+                    });
+
+                if (error) throw error;
+
+                if (!files || files.length === 0) {
+                    grid.innerHTML = '<p style="text-align: center; color: var(--gray); grid-column: 1 / -1;">No images in gallery yet. Upload some photos to get started!</p>';
+                    return;
+                }
+
+                grid.innerHTML = '';
+                files.forEach(file => {
+                    // Get public URL for each image
+                    const { data: urlData } = supabaseClient
+                        .storage
+                        .from('gallery')
+                        .getPublicUrl(file.name);
+
+                    const galleryItem = document.createElement('div');
+                    galleryItem.className = 'gallery-item';
+                    galleryItem.innerHTML = `
+                        <img src="${urlData.publicUrl}" alt="${file.name}" class="gallery-image" 
+                             onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'gallery-image\\'>📷</div>'">
+                    `;
+                    grid.appendChild(galleryItem);
+                });
+            } catch (error) {
+                console.error('Error loading gallery:', error);
+                grid.innerHTML = '<p style="text-align: center; color: #DC2626; grid-column: 1 / -1;">Error loading gallery. Please check your Supabase configuration and ensure the "gallery" bucket exists.</p>';
+            }
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            await supabaseClient.auth.signOut();
+            window.location.href = 'login.html';
+        });
+    </script>
+</body>
+</html>
+

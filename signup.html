@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Class Connect | Kegalu Vidyalaya M6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo">KV</div>
+                <div>
+                    <div class="school-name">Kegalu Vidyalaya</div>
+                    <div class="class-name">Class M6</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div style="max-width: 400px; margin: 3rem auto;">
+            <div class="card">
+                <h2 style="color: var(--primary-blue); text-align: center; margin-bottom: 1.5rem;">Join Class Connect</h2>
+                
+                <form id="signupForm" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div>
+                        <label for="name" style="display: block; margin-bottom: 0.5rem; color: var(--primary-blue); font-weight: 500;">Full Name</label>
+                        <input type="text" id="name" required 
+                               style="width: 100%; padding: 0.75rem; border: 2px solid var(--light-gray); border-radius: 10px; font-family: 'Poppins', sans-serif; font-size: 1rem; outline: none; transition: border-color 0.3s ease;"
+                               onfocus="this.style.borderColor='var(--light-blue)'" 
+                               onblur="this.style.borderColor='var(--light-gray)'">
+                    </div>
+
+                    <div>
+                        <label for="email" style="display: block; margin-bottom: 0.5rem; color: var(--primary-blue); font-weight: 500;">Email</label>
+                        <input type="email" id="email" required 
+                               style="width: 100%; padding: 0.75rem; border: 2px solid var(--light-gray); border-radius: 10px; font-family: 'Poppins', sans-serif; font-size: 1rem; outline: none; transition: border-color 0.3s ease;"
+                               onfocus="this.style.borderColor='var(--light-blue)'" 
+                               onblur="this.style.borderColor='var(--light-gray)'">
+                    </div>
+                    
+                    <div>
+                        <label for="password" style="display: block; margin-bottom: 0.5rem; color: var(--primary-blue); font-weight: 500;">Password</label>
+                        <input type="password" id="password" required minlength="6"
+                               style="width: 100%; padding: 0.75rem; border: 2px solid var(--light-gray); border-radius: 10px; font-family: 'Poppins', sans-serif; font-size: 1rem; outline: none; transition: border-color 0.3s ease;"
+                               onfocus="this.style.borderColor='var(--light-blue)'" 
+                               onblur="this.style.borderColor='var(--light-gray)'">
+                    </div>
+
+                    <div>
+                        <label for="class" style="display: block; margin-bottom: 0.5rem; color: var(--primary-blue); font-weight: 500;">Class</label>
+                        <input type="text" id="class" value="M6" required 
+                               style="width: 100%; padding: 0.75rem; border: 2px solid var(--light-gray); border-radius: 10px; font-family: 'Poppins', sans-serif; font-size: 1rem; outline: none; transition: border-color 0.3s ease;"
+                               onfocus="this.style.borderColor='var(--light-blue)'" 
+                               onblur="this.style.borderColor='var(--light-gray)'">
+                    </div>
+
+                    <div>
+                        <label for="bio" style="display: block; margin-bottom: 0.5rem; color: var(--primary-blue); font-weight: 500;">Bio (Optional)</label>
+                        <textarea id="bio" rows="3" 
+                                  style="width: 100%; padding: 0.75rem; border: 2px solid var(--light-gray); border-radius: 10px; font-family: 'Poppins', sans-serif; font-size: 1rem; outline: none; transition: border-color 0.3s ease; resize: vertical;"
+                                  onfocus="this.style.borderColor='var(--light-blue)'" 
+                                  onblur="this.style.borderColor='var(--light-gray)'"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">Sign Up</button>
+                </form>
+
+                <p style="text-align: center; margin-top: 1.5rem; color: var(--dark-gray);">
+                    Already have an account? <a href="login.html" style="color: var(--light-blue); text-decoration: none; font-weight: 600;">Login</a>
+                </p>
+
+                <div id="errorMessage" style="display: none; background: #FEE2E2; color: #DC2626; padding: 1rem; border-radius: 10px; margin-top: 1rem; text-align: center;"></div>
+                <div id="successMessage" style="display: none; background: #D1FAE5; color: #065F46; padding: 1rem; border-radius: 10px; margin-top: 1rem; text-align: center;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const classValue = document.getElementById('class').value;
+            const bio = document.getElementById('bio').value;
+            const errorDiv = document.getElementById('errorMessage');
+            const successDiv = document.getElementById('successMessage');
+
+            try {
+                // Sign up user
+                const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+                    email,
+                    password
+                });
+
+                if (authError) throw authError;
+
+                // Create user profile in users table
+                const { error: profileError } = await supabaseClient
+                    .from('users')
+                    .insert([
+                        {
+                            id: authData.user.id,
+                            name: name,
+                            email: email,
+                            class: classValue,
+                            bio: bio || null
+                        }
+                    ]);
+
+                if (profileError) throw profileError;
+
+                successDiv.textContent = 'Account created successfully! Redirecting...';
+                successDiv.style.display = 'block';
+                
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
+

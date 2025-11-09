@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact - Class Connect | Kegalu Vidyalaya M6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo">KV</div>
+                <div>
+                    <div class="school-name">Kegalu Vidyalaya</div>
+                    <div class="class-name">Class M6</div>
+                </div>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="profile.html">Profile</a></li>
+                    <li><a href="friends.html">Friends</a></li>
+                    <li><a href="events.html">Events</a></li>
+                    <li><a href="gallery.html">Gallery</a></li>
+                    <li><a href="contact.html" class="active">Contact</a></li>
+                    <li><a href="#" id="logoutBtn" style="color: var(--accent-yellow);">Logout</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1 class="page-title">Class Chat</h1>
+
+        <div class="chat-container">
+            <div class="chat-header">
+                💬 Class M6 Group Chat
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <p style="text-align: center; color: var(--gray);">Loading messages...</p>
+            </div>
+
+            <div class="chat-input">
+                <input type="text" id="messageInput" placeholder="Type your message here...">
+                <button class="btn" id="sendBtn">Send</button>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 2rem;">
+            <h2 style="color: var(--primary-blue); margin-bottom: 1rem;">Contact Information</h2>
+            <div style="display: grid; gap: 1rem;">
+                <div>
+                    <strong style="color: var(--primary-blue);">Class Teacher:</strong>
+                    <span style="color: var(--dark-gray);">Mrs. Priyanka Fernando</span>
+                </div>
+                <div>
+                    <strong style="color: var(--primary-blue);">Email:</strong>
+                    <span style="color: var(--dark-gray);">m6@kegaluvidyalaya.edu</span>
+                </div>
+                <div>
+                    <strong style="color: var(--primary-blue);">School:</strong>
+                    <span style="color: var(--dark-gray);">Kegalu Vidyalaya</span>
+                </div>
+                <div>
+                    <strong style="color: var(--primary-blue);">Class:</strong>
+                    <span style="color: var(--dark-gray);">M6</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let userProfile = null;
+        let chatChannel = null;
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            currentUser = await checkAuth();
+            if (currentUser) {
+                await loadUserProfile();
+                await loadMessages();
+                setupRealtimeChat();
+            }
+        });
+
+        async function loadUserProfile() {
+            const { data } = await supabaseClient
+                .from('users')
+                .select('*')
+                .eq('id', currentUser.id)
+                .single();
+            userProfile = data;
+        }
+
+        function formatChatTime(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleTimeString('en-US', { 
+                hour: 'numeric', 
+                minute: '2-digit',
+                hour12: true 
+            });
+        }
+
+        async function loadMessages() {
+            const container = document.getElementById('chatMessages');
+            
+            try {
+                const { data: messages, error } = await supabaseClient
+                    .from('messages')
+                    .select(`
+                        *,
+                        users:user_id (
+                            name
+                        )
+                    `)
+                    .order('created_at', { ascending: true })
+                    .limit(50);
+
+                if (error) throw error;
+
+                container.innerHTML = '';
+                if (messages.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: var(--gray);">No messages yet. Start the conversation!</p>';
+                    return;
+                }
+
+                messages.forEach(message => {
+                    const user = message.users;
+                    const isSent = message.user_id === currentUser.id;
+                    const initials = getInitials(user.name);
+                    addMessageToChat(message, user.name, initials, isSent);
+                });
+
+                scrollToBottom();
+            } catch (error) {
+                console.error('Error loading messages:', error);
+                container.innerHTML = '<p style="text-align: center; color: #DC2626;">Error loading messages. Please check your Supabase configuration.</p>';
+            }
+        }
+
+        function addMessageToChat(message, userName, initials, isSent) {
+            const container = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isSent ? 'sent' : ''}`;
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${initials}</div>
+                <div class="message-content">
+                    <div class="message-name">${userName}</div>
+                    <div class="message-text">${message.text}</div>
+                    <div class="message-time">${formatChatTime(message.created_at)}</div>
+                </div>
+            `;
+            container.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('chatMessages');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function setupRealtimeChat() {
+            // Subscribe to new messages
+            chatChannel = supabaseClient
+                .channel('messages')
+                .on('postgres_changes', 
+                    { event: 'INSERT', schema: 'public', table: 'messages' },
+                    async (payload) => {
+                        // Fetch user info for the new message
+                        const { data: user } = await supabaseClient
+                            .from('users')
+                            .select('name')
+                            .eq('id', payload.new.user_id)
+                            .single();
+                        
+                        const isSent = payload.new.user_id === currentUser.id;
+                        const initials = getInitials(user.name);
+                        addMessageToChat(payload.new, user.name, initials, isSent);
+                    }
+                )
+                .subscribe();
+        }
+
+        document.getElementById('sendBtn').addEventListener('click', sendMessage);
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+
+            if (!text) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('messages')
+                    .insert([
+                        {
+                            user_id: currentUser.id,
+                            text: text
+                        }
+                    ]);
+
+                if (error) throw error;
+
+                input.value = '';
+            } catch (error) {
+                alert('Error sending message: ' + error.message);
+            }
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            if (chatChannel) {
+                await supabaseClient.removeChannel(chatChannel);
+            }
+            await supabaseClient.auth.signOut();
+            window.location.href = 'login.html';
+        });
+    </script>
+</body>
+</html>
+

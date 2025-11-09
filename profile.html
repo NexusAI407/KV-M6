@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Class Connect | Kegalu Vidyalaya M6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo">KV</div>
+                <div>
+                    <div class="school-name">Kegalu Vidyalaya</div>
+                    <div class="class-name">Class M6</div>
+                </div>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="profile.html" class="active">Profile</a></li>
+                    <li><a href="friends.html">Friends</a></li>
+                    <li><a href="events.html">Events</a></li>
+                    <li><a href="gallery.html">Gallery</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                    <li><a href="#" id="logoutBtn" style="color: var(--accent-yellow);">Logout</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="profile-header" id="profileHeader">
+            <div class="profile-picture" id="profilePicture">...</div>
+            <div class="profile-name" id="profileName">Loading...</div>
+            <div class="profile-class" id="profileClass">...</div>
+        </div>
+
+        <div class="profile-bio">
+            <h2>About Me</h2>
+            <p id="profileBio">Loading...</p>
+            <button class="btn btn-yellow" id="editBioBtn" style="margin-top: 1rem;">Edit Bio</button>
+        </div>
+
+        <div class="card">
+            <h2 style="color: var(--primary-blue); margin-bottom: 1rem;">My Information</h2>
+            <div style="display: grid; gap: 1rem;" id="profileInfo">
+                <div>
+                    <strong style="color: var(--primary-blue);">Email:</strong>
+                    <span style="color: var(--dark-gray);" id="profileEmail">Loading...</span>
+                </div>
+                <div>
+                    <strong style="color: var(--primary-blue);">Class:</strong>
+                    <span style="color: var(--dark-gray);" id="profileClassInfo">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let userProfile = null;
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            currentUser = await checkAuth();
+            if (currentUser) {
+                await loadProfile();
+            }
+        });
+
+        async function loadProfile() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('users')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .single();
+
+                if (error) throw error;
+
+                userProfile = data;
+                const initials = getInitials(data.name);
+
+                document.getElementById('profilePicture').textContent = initials;
+                document.getElementById('profileName').textContent = data.name;
+                document.getElementById('profileClass').textContent = `Class ${data.class}`;
+                document.getElementById('profileBio').textContent = data.bio || 'No bio yet. Click "Edit Bio" to add one!';
+                document.getElementById('profileEmail').textContent = data.email;
+                document.getElementById('profileClassInfo').textContent = data.class;
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                alert('Error loading profile: ' + error.message);
+            }
+        }
+
+        document.getElementById('editBioBtn').addEventListener('click', () => {
+            const newBio = prompt('Enter your bio:', userProfile.bio || '');
+            if (newBio !== null) {
+                updateBio(newBio);
+            }
+        });
+
+        async function updateBio(bio) {
+            try {
+                const { error } = await supabaseClient
+                    .from('users')
+                    .update({ bio: bio })
+                    .eq('id', currentUser.id);
+
+                if (error) throw error;
+
+                userProfile.bio = bio;
+                document.getElementById('profileBio').textContent = bio || 'No bio yet. Click "Edit Bio" to add one!';
+            } catch (error) {
+                alert('Error updating bio: ' + error.message);
+            }
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            await supabaseClient.auth.signOut();
+            window.location.href = 'login.html';
+        });
+    </script>
+</body>
+</html>
+

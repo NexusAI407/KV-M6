@@ -1,0 +1,98 @@
+PROJECT NAME: Class Connect (Mini Facebook for Our School)
+
+PURPOSE:
+To create a private, fun, and simple social platform for classmates to connect, share posts, see school events, and view photos — built using HTML, CSS, and Supabase (for future data storage).
+
+SCHOOL: Kegalu Vidyalaya
+CLASS: M6
+
+FEATURES:
+1. User Profiles
+   - Profile picture, name, class, about info
+   - Editable later through Supabase
+
+2. News Feed
+   - Displays posts from classmates
+   - Each post: user name, image, caption, time
+   - Static for now (HTML only), later connected to Supabase table “posts”
+
+3. Friends Page
+   - Shows a grid of all classmates with photo and name
+   - Future: “Add Friend” button stored in “friends” table
+
+4. Events Page
+   - List of upcoming class or school events
+   - Supabase table: “events” with (title, date, description)
+
+5. Gallery Page
+   - Grid of photos from school life
+   - Stored in Supabase storage bucket “gallery”
+
+6. Contact / Chat Page
+   - Simple chat layout (HTML only now)
+   - Future: real-time chat using Supabase Realtime
+
+7. Authentication (future)
+   - Signup & login system via Supabase Auth
+   - Restrict access to only class members
+
+DESIGN STYLE:
+- Theme colors: Blue and Yellow
+- Rounded corners, shadowed boxes
+- Clean, modern font (Poppins)
+- Responsive for both mobile and desktop
+- Class logo and name at top of every page
+
+PAGES:
+1. index.html – Home / News Feed
+2. profile.html – User Profile
+3. friends.html – Friends list
+4. events.html – Events calendar
+5. gallery.html – Photo gallery
+6. contact.html – Chat / Contact
+7. style.css – Global stylesheet
+
+DATABASE (Supabase Structure):
+TABLE: users
+  - id
+  - name
+  - email
+  - class
+  - profile_pic
+  - bio
+
+TABLE: posts
+  - id
+  - user_id
+  - content
+  - image_url
+  - created_at
+
+TABLE: friends
+  - id
+  - user_id
+  - friend_id
+
+TABLE: events
+  - id
+  - title
+  - date
+  - description
+
+BUCKET: gallery
+  - stores uploaded images
+
+SECURITY:
+- Only authenticated users can read/write data
+- Public read for gallery only
+- Role-based access (admin = teacher)
+
+FUTURE UPGRADES:
+- Add real-time chat (Supabase Realtime)
+- Add likes/comments
+- Add dark mode
+- Deploy via Netlify or Vercel
+
+AUTHOR:
+Adiptha Wekadapala
+Created for: Kegalu Vidyalaya – M6

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Connect - News Feed | Kegalu Vidyalaya M6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo">KV</div>
+                <div>
+                    <div class="school-name">Kegalu Vidyalaya</div>
+                    <div class="class-name">Class M6</div>
+                </div>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="index.html" class="active">Home</a></li>
+                    <li><a href="profile.html">Profile</a></li>
+                    <li><a href="friends.html">Friends</a></li>
+                    <li><a href="events.html">Events</a></li>
+                    <li><a href="gallery.html">Gallery</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                    <li><a href="#" id="logoutBtn" style="color: var(--accent-yellow);">Logout</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1 class="page-title">News Feed</h1>
+
+        <!-- Create Post Form -->
+        <div class="card">
+            <h3 style="color: var(--primary-blue); margin-bottom: 1rem;">Create a Post</h3>
+            <form id="createPostForm" style="display: flex; flex-direction: column; gap: 1rem;">
+                <textarea id="postContent" rows="3" placeholder="What's on your mind?" required
+                          style="width: 100%; padding: 0.75rem; border: 2px solid var(--light-gray); border-radius: 10px; font-family: 'Poppins', sans-serif; font-size: 1rem; outline: none; resize: vertical;"
+                          onfocus="this.style.borderColor='var(--light-blue)'" 
+                          onblur="this.style.borderColor='var(--light-gray)'"></textarea>
+                <input type="url" id="postImageUrl" placeholder="Image URL (optional)"
+                       style="width: 100%; padding: 0.75rem; border: 2px solid var(--light-gray); border-radius: 10px; font-family: 'Poppins', sans-serif; font-size: 1rem; outline: none;"
+                       onfocus="this.style.borderColor='var(--light-blue)'" 
+                       onblur="this.style.borderColor='var(--light-gray)'">
+                <button type="submit" class="btn">Post</button>
+            </form>
+        </div>
+
+        <!-- Posts Container -->
+        <div id="postsContainer">
+            <!-- Posts will be loaded here dynamically -->
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        // Check authentication on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            currentUser = await checkAuth();
+            if (currentUser) {
+                await loadPosts();
+            }
+        });
+
+        // Load posts from database
+        async function loadPosts() {
+            const container = document.getElementById('postsContainer');
+            container.innerHTML = '<p style="text-align: center; color: var(--gray);">Loading posts...</p>';
+
+            try {
+                const { data: posts, error } = await supabaseClient
+                    .from('posts')
+                    .select(`
+                        *,
+                        users:user_id (
+                            name,
+                            profile_pic
+                        )
+                    `)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                if (posts.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: var(--gray);">No posts yet. Be the first to post!</p>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                posts.forEach(post => {
+                    const user = post.users;
+                    const initials = getInitials(user.name);
+                    const postCard = document.createElement('div');
+                    postCard.className = 'post-card';
+                    postCard.innerHTML = `
+                        <div class="post-header">
+                            <div class="post-avatar">${initials}</div>
+                            <div class="post-info">
+                                <h3>${user.name}</h3>
+                                <div class="post-time">${formatTime(post.created_at)}</div>
+                            </div>
+                        </div>
+                        <div class="post-content">
+                            <p>${post.content}</p>
+                        </div>
+                        ${post.image_url ? `<img src="${post.image_url}" alt="Post image" class="post-image" onerror="this.style.display='none'">` : ''}
+                    `;
+                    container.appendChild(postCard);
+                });
+            } catch (error) {
+                console.error('Error loading posts:', error);
+                container.innerHTML = '<p style="text-align: center; color: #DC2626;">Error loading posts. Please check your Supabase configuration.</p>';
+            }
+        }
+
+        // Create new post
+        document.getElementById('createPostForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const content = document.getElementById('postContent').value;
+            const imageUrl = document.getElementById('postImageUrl').value;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('posts')
+                    .insert([
+                        {
+                            user_id: currentUser.id,
+                            content: content,
+                            image_url: imageUrl || null
+                        }
+                    ]);
+
+                if (error) throw error;
+
+                // Clear form
+                document.getElementById('createPostForm').reset();
+                
+                // Reload posts
+                await loadPosts();
+            } catch (error) {
+                alert('Error creating post: ' + error.message);
+            }
+        });
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            await supabaseClient.auth.signOut();
+            window.location.href = 'login.html';
+        });
+    </script>
+</body>
+</html>
+
